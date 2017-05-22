@@ -120,8 +120,8 @@ Temporary Items
 *.csv
 *.iml
 .idea/
-resource/
+# resource/
 otp/
 lib/
 *.gdb*
-
+target/

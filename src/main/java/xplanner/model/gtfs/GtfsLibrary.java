@@ -15,7 +15,7 @@ public class GtfsLibrary {
 
 
     public static Set<Stop> getActiveStops(Collection<StopTime> stopTimes) {
-        Set<Stop> result = new HashSet<>();
+        Set<Stop> result = new HashSet<Stop>();
         for (StopTime stopTime : stopTimes) {
             result.add(stopTime.getStop());
         }

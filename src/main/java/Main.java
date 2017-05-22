@@ -58,8 +58,7 @@ public class Main {
         ProgressIndicator.getInstance().setText("Sparksee: building POIs data");
         sparkseeWriter.buildData(csvData.getEvents(), csvData.getPlaces());
 
-        //only for our festa major case, the further execution will be done with Precalculate Routes
-        //sparkseeWriter.copyFrom("old_data.gdb");
+        
         ProgressIndicator.getInstance().setText("Sparksee: building GTFS data");
         sparkseeWriter.writeGTFS(gtfs);
         ProgressIndicator.getInstance().setText("Sparksee: precalculating routes");
