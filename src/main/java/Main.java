@@ -1,4 +1,8 @@
-import xplanner.model.gtfs.GtfsData;
+import gtfs.GtfsData;
+import org.onebusaway.csv_entities.schema.DefaultEntitySchemaFactory;
+import org.onebusaway.gtfs.serialization.GtfsEntitySchemaFactory;
+import org.onebusaway.gtfs.serialization.GtfsWriter;
+import org.onebusaway.gtfs_transformer.services.SchemaUpdateStrategy;
 import xplanner.model.CSVData;
 
 import java.io.File;
@@ -50,7 +54,7 @@ public class Main {
         CSVData csvData = new CSVData();
         csvData.readDataFromFile("finished_data.csv");
 
-
+/*
         SparkseeWriter sparkseeWriter = new SparkseeWriter();
         sparkseeWriter.init();
         ProgressIndicator.getInstance().setText("creating sparksee schema");
@@ -58,7 +62,7 @@ public class Main {
         ProgressIndicator.getInstance().setText("Sparksee: building POIs data");
         sparkseeWriter.buildData(csvData.getEvents(), csvData.getPlaces());
 
-        
+
         ProgressIndicator.getInstance().setText("Sparksee: building GTFS data");
         sparkseeWriter.writeGTFS(gtfs);
         ProgressIndicator.getInstance().setText("Sparksee: precalculating routes");
@@ -85,7 +89,27 @@ public class Main {
         }
         */
 
+        gtfs.removeUnusedStops();
+
+        File outputDir = new File("output");
+        if (!outputDir.exists()) outputDir.mkdirs();
+
+        GtfsWriter writer = new GtfsWriter();
+        writer.setOutputLocation(outputDir);
+
+        DefaultEntitySchemaFactory schemaFactory = new DefaultEntitySchemaFactory();
+        schemaFactory.addFactory(GtfsEntitySchemaFactory.createEntitySchemaFactory());
+
+        writer.setEntitySchemaFactory(schemaFactory);
+        try {
+            writer.run(gtfs.getStore());
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+
         ProgressIndicator.getInstance().close();
+
+        System.exit(0);
     }
 
 

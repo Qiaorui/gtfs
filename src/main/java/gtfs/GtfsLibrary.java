@@ -1,4 +1,4 @@
-package xplanner.model.gtfs;
+package gtfs;
 
 import org.onebusaway.gtfs.model.Stop;
 import org.onebusaway.gtfs.model.StopTime;

@@ -5,11 +5,11 @@ import org.json.simple.JSONArray;
 import org.json.simple.JSONObject;
 import org.onebusaway.gtfs.model.*;
 import xplanner.model.RouteMode;
-import xplanner.model.gtfs.GtfsData;
+import gtfs.GtfsData;
 import xplanner.model.Place;
 import xplanner.model.PlainEvent;
 import xplanner.model.TimeWindows;
-import xplanner.model.gtfs.GtfsLibrary;
+import gtfs.GtfsLibrary;
 
 import java.io.FileNotFoundException;
 import java.util.*;

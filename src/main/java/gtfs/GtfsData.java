@@ -1,20 +1,13 @@
-package xplanner.model.gtfs;
+package gtfs;
 
-import javafx.util.Pair;
-import org.apache.commons.logging.Log;
 import org.onebusaway.gtfs.impl.GtfsRelationalDaoImpl;
-import org.onebusaway.gtfs.impl.StopTimeArray;
-import org.onebusaway.gtfs.impl.calendar.CalendarServiceImpl;
 import org.onebusaway.gtfs.model.*;
 import org.onebusaway.gtfs.serialization.GtfsReader;
 import org.onebusaway.gtfs.services.GtfsMutableRelationalDao;
-import org.onebusaway.gtfs.services.calendar.CalendarService;
 
 import java.io.File;
 import java.io.IOException;
 import java.util.*;
-import java.util.stream.Collector;
-import java.util.stream.Collectors;
 
 /**
  * Created by qiaoruixiang on 08/05/2017.
@@ -115,7 +108,6 @@ public class GtfsData {
         rebuildStopTime();
 
 
-
         System.out.println("*******************************************");
         System.out.println("\t\tRebuild Report\n");
         System.out.println("Agency\t\t" + beforeAgency + "\t->\t" + store.getAllAgencies().size());
@@ -134,6 +126,17 @@ public class GtfsData {
 
     }
 
+
+    public void removeUnusedStops() {
+        int beforeStop = store.getAllStops().size();
+
+        store.getAllStops().retainAll(GtfsLibrary.getActiveStops(store.getAllStopTimes()));
+
+        System.out.println("*******************************************");
+        System.out.println("\t\tRemove Report\n");
+        System.out.println("Stop\t\t" + beforeStop + "\t->\t" + store.getAllStops().size());
+
+    }
 
     private void rebuildStopTime() {
         //Collection<ServiceCalendar> calendars = store.getAllCalendars();
