@@ -2,8 +2,7 @@ import gtfs.GtfsData;
 import org.onebusaway.csv_entities.schema.DefaultEntitySchemaFactory;
 import org.onebusaway.gtfs.serialization.GtfsEntitySchemaFactory;
 import org.onebusaway.gtfs.serialization.GtfsWriter;
-import org.onebusaway.gtfs_transformer.services.SchemaUpdateStrategy;
-import xplanner.model.CSVData;
+import xplanner.model.PoiData;
 
 import java.io.File;
 import java.io.IOException;
@@ -51,20 +50,26 @@ public class Main {
 
         //gtfs.fillTransfer();
         ProgressIndicator.getInstance().setText("reading POIs file");
-        CSVData csvData = new CSVData();
-        csvData.readDataFromFile("finished_data.csv");
+        PoiData poiData = new PoiData();
+        //poiData.readDataFromFile("finished_data.csv");
+        poiData.readDataFromWeb("http://xplanner-cigo.herokuapp.com/api/pois");
 
-/*
+
+
         SparkseeWriter sparkseeWriter = new SparkseeWriter();
         sparkseeWriter.init();
         ProgressIndicator.getInstance().setText("creating sparksee schema");
-        sparkseeWriter.createSchema("xplanner.gdb", "Xplanner");
+        sparkseeWriter.createSchema("tplanner.gdb", "Tplanner");
         ProgressIndicator.getInstance().setText("Sparksee: building POIs data");
-        sparkseeWriter.buildData(csvData.getEvents(), csvData.getPlaces());
+        sparkseeWriter.buildData(poiData.getPois(), poiData.getPlaces());
 
 
         ProgressIndicator.getInstance().setText("Sparksee: building GTFS data");
         sparkseeWriter.writeGTFS(gtfs);
+
+        ProgressIndicator.getInstance().setText("Sparksee: building auxiliary point");
+        sparkseeWriter.setUpAuxiliaryPoints();
+
         ProgressIndicator.getInstance().setText("Sparksee: precalculating routes");
         sparkseeWriter.precalculateRoutes();
         sparkseeWriter.close();
@@ -87,7 +92,6 @@ public class Main {
         for (Route route : routesById.values()) {
             System.out.println("route: " + route.getShortName());
         }
-        */
 
         gtfs.removeUnusedStops();
 
@@ -106,6 +110,7 @@ public class Main {
         } catch (Exception e) {
             e.printStackTrace();
         }
+        */
 
         ProgressIndicator.getInstance().close();
 

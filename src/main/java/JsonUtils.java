@@ -1,11 +1,10 @@
+
 import org.json.simple.JSONArray;
 import org.json.simple.JSONObject;
-
 /**
  * Created by qiaoruixiang on 19/05/2017.
  */
 public class JsonUtils {
-
     public static int getAvgDuration(JSONArray jsonArray) {
         int acc = 0;
         int times = 0;
@@ -53,7 +52,6 @@ public class JsonUtils {
             return Math.toIntExact((long)obj);
         }
     }
-
 
 
 }

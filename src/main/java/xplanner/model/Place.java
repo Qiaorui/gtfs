@@ -12,25 +12,25 @@ public class Place {
     }
 
     private String locationName;
-    private String latitude;
-    private String longitude;
+    private Double latitude;
+    private Double longitude;
     private String address;
     private String district;
 
     private String vertexType;
 
-    public Place(String name, String latitude, String longitude) {
+    public Place(String name, double latitude, double longitude) {
         locationName = name;
         this.latitude = latitude;
         this.longitude = longitude;
     }
 
-    public Place(String latitude, String longitude) {
+    public Place(double latitude, double longitude) {
         this.latitude = latitude;
         this.longitude = longitude;
     }
 
-    public Place(String locationName, String latitude, String longitude, String address, String district) {
+    public Place(String locationName, double latitude, double longitude, String address, String district) {
         this.locationName = locationName;
         this.latitude = latitude;
         this.longitude = longitude;
@@ -62,19 +62,19 @@ public class Place {
         this.district = district;
     }
 
-    public String getLatitude() {
+    public double getLatitude() {
         return latitude;
     }
 
-    public void setLatitude(String latitude) {
+    public void setLatitude(double latitude) {
         this.latitude = latitude;
     }
 
-    public String getLongitude() {
+    public double getLongitude() {
         return longitude;
     }
 
-    public void setLongitude(String longitude) {
+    public void setLongitude(double longitude) {
         this.longitude = longitude;
     }
 

@@ -1,14 +1,11 @@
-import Service.OTPService;
+import service.OTPService;
 import com.sparsity.sparksee.gdb.*;
 import com.sparsity.sparksee.gdb.Objects;
 import org.json.simple.JSONArray;
 import org.json.simple.JSONObject;
 import org.onebusaway.gtfs.model.*;
-import xplanner.model.RouteMode;
+import xplanner.model.*;
 import gtfs.GtfsData;
-import xplanner.model.Place;
-import xplanner.model.PlainEvent;
-import xplanner.model.TimeWindows;
 import gtfs.GtfsLibrary;
 
 import java.io.FileNotFoundException;
@@ -37,13 +34,75 @@ public class SparkseeWriter {
     }
 
 
+    public void testRoute() {
+        System.out.println("TESTING routes");
+        SparkseeConfig cfg = new SparkseeConfig();
+        Sparksee sparksee = new Sparksee(cfg);
+        try {
+            Database db = sparksee.open("tplanner.gdb", true);
+
+            Session sess = db.newSession();
+            Graph g = sess.getGraph();
+
+            Value value = new Value();
+
+            int stopType = g.findType("STOP");
+            int stopIdType = g.findAttribute(stopType, "ID");
+            int stopLatitudeType = g.findAttribute(stopType, "LATITUDE");
+            int stopLongitudeType = g.findAttribute(stopType, "LONGITUDE");
+
+            int routeType = g.findType("ROUTE");
+            int routeIdType = g.findAttribute(routeType, "ROUTE_ID");
+            int routeDurationType = g.findAttribute(routeType, "DURATION");
+            int routeModeType = g.findAttribute(routeType, "MODE");
+
+            Objects routes = g.select(routeModeType, Condition.Equal, value.setInteger(RouteMode.TRANSIT.ordinal()));
+            System.out.println( routes.size() + " routes transit found");
+
+            for (long route : routes) {
+                EdgeData edgeData = g.getEdgeData(route);
+                long to = edgeData.getHead();
+                long from = edgeData.getTail();
+                Objects tmp = g.edges(routeType, from, to);
+
+                Objects rs = Objects.combineIntersection(tmp, routes);
+                if (rs.size() > 1) {
+                    for (long baby : rs) {
+                        EdgeData ed = g.getEdgeData(route);
+                        g.getAttribute(ed.getHead(), stopIdType, value);
+                        String y = value.getString();
+                        g.getAttribute(ed.getTail(), stopIdType, value);
+                        String x = value.getString();
+                        g.getAttribute(baby, routeIdType, value);
+                        System.out.println( x + " ->" + y + " :" + value.getString());
+                    }
+
+                }
+
+                rs.close();
+                tmp.close();
+            }
+
+            routes.close();
+
+            sess.close();
+            db.close();
+            sparksee.close();
+
+        } catch (FileNotFoundException e) {
+            System.out.println("Sparksee Database not found: " + e.getMessage());
+        }
+
+
+    }
+
     public void testData() {
         System.out.println("READING data");
 
         SparkseeConfig cfg = new SparkseeConfig();
         Sparksee sparksee = new Sparksee(cfg);
         try {
-            Database db = sparksee.open("xplanner.gdb", true);
+            Database db = sparksee.open("tplanner.gdb", true);
 
             Session sess = db.newSession();
             Graph g = sess.getGraph();
@@ -174,7 +233,7 @@ public class SparkseeWriter {
         int poiType = g.newNodeType("POI");
         g.newAttribute(poiType, "ID", DataType.Long, AttributeKind.Unique);
         g.newAttribute(poiType, "DURATION", DataType.Integer, AttributeKind.Basic);
-        g.newAttribute(poiType, "SCORE", DataType.Integer, AttributeKind.Basic);
+        g.newAttribute(poiType, "BASE_SCORE", DataType.Integer, AttributeKind.Basic);
         g.newAttribute(poiType, "HIGHLIGHT", DataType.Boolean, AttributeKind.Basic);
 
         int venueType = g.newNodeType("VENUE");
@@ -189,31 +248,37 @@ public class SparkseeWriter {
         g.newAttribute(stopType, "LATITUDE", DataType.Double, AttributeKind.Indexed);
         g.newAttribute(stopType, "LONGITUDE", DataType.Double, AttributeKind.Indexed);
 
+        int auxiliaryType = g.newNodeType("AUXILIARY");
+        g.newAttribute(auxiliaryType, "NAME", DataType.String, AttributeKind.Unique);
+        g.newAttribute(auxiliaryType, "LATITUDE", DataType.Double, AttributeKind.Indexed);
+        g.newAttribute(auxiliaryType, "LONGITUDE", DataType.Double, AttributeKind.Indexed);
+
 
         // Add a directed edge type restricted to go from people to movie for the director of a movie
         int scoringType = g.newRestrictedEdgeType("SCORING", poiType, categoryType, true);
-        g.newAttribute(scoringType, "SCORE", DataType.Double, AttributeKind.Basic);
+        g.newAttribute(scoringType, "SCORE", DataType.Integer, AttributeKind.Basic);
 
         int runType = g.newRestrictedEdgeType("RUN", venueType, poiType, true);
-        g.newAttribute(runType, "DAY", DataType.Timestamp, AttributeKind.Indexed);
+        g.newAttribute(runType, "DAY", DataType.Integer, AttributeKind.Indexed);
         g.newAttribute(runType, "OPEN_TIME", DataType.Integer, AttributeKind.Indexed);
         g.newAttribute(runType, "CLOSE_TIME", DataType.Integer, AttributeKind.Indexed);
 
         int routeType = g.newEdgeType("ROUTE", true, true);
         g.newAttribute(routeType, "DURATION", DataType.Integer, AttributeKind.Basic);
+        g.newAttribute(routeType, "ROUTE_ID", DataType.String, AttributeKind.Basic);
         g.newAttribute(routeType, "MODE", DataType.Integer, AttributeKind.Basic);
 
 
     }
 
-    public void buildData(ArrayList<PlainEvent> events, Set<Place> places) {
+    public void buildData(List<Poi> pois, Set<Place> places) {
 
         Graph g = sess.getGraph();
 
         int poiType = g.findType("POI");
         int poiIdType = g.findAttribute(poiType, "ID");
         int poiDurationType = g.findAttribute(poiType, "DURATION");
-        int poiScoreType = g.findAttribute(poiType, "SCORE");
+        int poiScoreType = g.findAttribute(poiType, "BASE_SCORE");
         int poiHighlightType = g.findAttribute(poiType, "HIGHLIGHT");
 
         int venueType = g.findType("VENUE");
@@ -249,42 +314,39 @@ public class SparkseeWriter {
         // add places
         for (Place p : places) {
             long place = g.newNode(venueType);
-            g.setAttribute(place, venueLatitudeType, value.setDouble(Double.parseDouble(p.getLatitude())));
-            g.setAttribute(place, venueLongitudeType, value.setDouble(Double.parseDouble(p.getLongitude())));
+            g.setAttribute(place, venueLatitudeType, value.setDouble(p.getLatitude()));
+            g.setAttribute(place, venueLongitudeType, value.setDouble(p.getLongitude()));
         }
 
-        for (int i = 0; i < events.size(); i++) {
+        for (int i = 0; i < pois.size(); i++) {
             long event = g.newNode(poiType);
             g.setAttribute(event, poiIdType, value.setLong(i));
-            g.setAttribute(event, poiDurationType, value.setInteger(events.get(i).getDuration()));
-            g.setAttribute(event, poiHighlightType, value.setBoolean(events.get(i).isHighlight()));
-            g.setAttribute(event, poiScoreType, value.setInteger(events.get(i).getScore()));
+            g.setAttribute(event, poiDurationType, value.setInteger(pois.get(i).getDuration()));
+            g.setAttribute(event, poiHighlightType, value.setBoolean(pois.get(i).isHighlight()));
+            g.setAttribute(event, poiScoreType, value.setInteger(pois.get(i).getBaseScore()));
 
 
             // event -> category
-            for (Map.Entry<String, Double> entry : events.get(i).getCategory().entrySet()) {
+            for (Map.Entry<String, Integer> entry : pois.get(i).getCategories().entrySet()) {
                 long cat = g.findOrCreateObject(categoryNameType, value.setString(entry.getKey()));
                 long scoring = g.newEdge(scoringType, event, cat);
-                g.setAttribute(scoring, scoringScoreType, value.setDouble(entry.getValue()));
+                g.setAttribute(scoring, scoringScoreType, value.setInteger(entry.getValue()));
             }
 
             // add time windows
             long place = findPlace(
-                    Double.parseDouble(events.get(i).getLatitude()),
-                    Double.parseDouble(events.get(i).getLongitude()),
+                    pois.get(i).getLatitude(),
+                    pois.get(i).getLongitude(),
                     g,
                     venueLatitudeType,
                     venueLongitudeType,
                     value
             );
-            for (Map.Entry<Integer, ArrayList<TimeWindows>> day : events.get(i).getTimeWindows().entrySet()){
-                for (TimeWindows tw : day.getValue()) {
-                    long run = g.newEdge(runType, place, event);
-                    //TODO: this is beta
-                    g.setAttribute(run, runDayType, value.setTimestamp(2016,9,day.getKey(),0,0,0,0));
-                    g.setAttribute(run, runOpenType, value.setInteger(tw.getOpenTime()));
-                    g.setAttribute(run, runCloseType, value.setInteger(tw.getCloseTime()));
-                }
+            for (Schedule schedule : pois.get(i).getSchedules()){
+                long run = g.newEdge(runType, place, event);
+                g.setAttribute(run, runDayType, value.setInteger(schedule.getDay()));
+                g.setAttribute(run, runOpenType, value.setInteger(schedule.getOpenTime()));
+                g.setAttribute(run, runCloseType, value.setInteger(schedule.getCloseTime()));
             }
 
         }
@@ -303,6 +365,7 @@ public class SparkseeWriter {
         int stopLongitudeType = g.findAttribute(stopType, "LONGITUDE");
 
         int routeType = g.findType("ROUTE");
+        int routeIdType = g.findAttribute(routeType, "ROUTE_ID");
         int routeDurationType = g.findAttribute(routeType, "DURATION");
         int routeModeType = g.findAttribute(routeType, "MODE");
 
@@ -419,6 +482,7 @@ public class SparkseeWriter {
                     long to = g.findObject(stopIdType, value.setString(stop.getId().getId()));
                     long edge = g.newEdge(routeType, from, to);
                     g.setAttribute(edge, routeModeType, value.setInteger(RouteMode.TRANSIT.ordinal()));
+                    g.setAttribute(edge, routeIdType, value.setString(route.getId().getId()));
                 });
 
             });
@@ -537,6 +601,55 @@ public class SparkseeWriter {
 
 
 
+    }
+
+
+    public void setUpAuxiliaryPoints() {
+        Graph g = sess.getGraph();
+        Value value = new Value();
+
+        int stopType = g.findType("STOP");
+        int stopIdType = g.findAttribute(stopType, "ID");
+        int stopLatitudeType = g.findAttribute(stopType, "LATITUDE");
+        int stopLongitudeType = g.findAttribute(stopType, "LONGITUDE");
+
+        int routeType = g.findType("ROUTE");
+        int routeDurationType = g.findAttribute(routeType, "DURATION");
+        int routeModeType = g.findAttribute(routeType, "MODE");
+
+        int venueType = g.findType("VENUE");
+        int venueLatitudeType = g.findAttribute(venueType, "LATITUDE");
+        int venueLongitudeType = g.findAttribute(venueType, "LONGITUDE");
+
+        int auxiliaryType = g.findType("AUXILIARY");
+        int auxiliaryNameType = g.findAttribute(auxiliaryType, "NAME");
+        int auxiliaryLatitudeType = g.findAttribute(auxiliaryType, "LATITUDE");
+        int auxiliaryLongitudeType = g.findAttribute(auxiliaryType, "LONGITUDE");
+
+        long startPoint = g.newNode(auxiliaryType);
+        g.setAttribute(startPoint, auxiliaryNameType, value.setString("start"));
+        long endPoint = g.newNode(auxiliaryType);
+        g.setAttribute(endPoint, auxiliaryNameType, value.setString("end"));
+
+
+        Objects stops = g.select(stopType);
+        Objects venues = g.select(venueType);
+
+        for (long s : stops) {
+            long tmp1 = g.newEdge(routeType, startPoint, s);
+            g.setAttribute(tmp1, routeModeType, value.setInteger(RouteMode.UNKNOWN.ordinal()));
+            long tmp2 = g.newEdge(routeType, s, endPoint);
+            g.setAttribute(tmp2, routeModeType, value.setInteger(RouteMode.UNKNOWN.ordinal()));
+        }
+        for (long v : venues) {
+            long tmp1 = g.newEdge(routeType, startPoint, v);
+            g.setAttribute(tmp1, routeModeType, value.setInteger(RouteMode.UNKNOWN.ordinal()));
+            long tmp2 = g.newEdge(routeType, v, endPoint);
+            g.setAttribute(tmp2, routeModeType, value.setInteger(RouteMode.UNKNOWN.ordinal()));
+        }
+
+        venues.close();
+        stops.close();
     }
 
 

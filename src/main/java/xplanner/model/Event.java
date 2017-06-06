@@ -44,11 +44,11 @@ public class Event {
         timeWindows = new HashMap<>();
     }
 
-    public String getLatitude() {
+    public double getLatitude() {
         return place.getLatitude();
     }
 
-    public String getLongitude() {
+    public double getLongitude() {
         return place.getLongitude();
     }
 
@@ -143,7 +143,7 @@ public class Event {
 
     public void bindData(Map<String, String> data) {
         title = data.get("title");
-        place = new Place(data.get("location"), data.get("latitude"), data.get("longitude"), data.get("address"), data.get("district"));
+        //place = new Place(data.get("location"), data.get("latitude"), data.get("longitude"), data.get("address"), data.get("district"));
         place.setVertexType("EVENT");
         information = data.get("information");
         highlight = data.get("highlight").equals("True");
