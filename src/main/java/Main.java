@@ -1,17 +1,24 @@
 import gtfs.GtfsData;
+import network.datasource.CategoryAPI;
+import network.datasource.EventAPI;
+import network.datasource.impl.CategoryAPIImpl;
+import network.datasource.impl.EventAPIImpl;
+import network.model.response.CategoryResponse;
+import network.model.response.EventResponse;
 import org.onebusaway.csv_entities.schema.DefaultEntitySchemaFactory;
 import org.onebusaway.gtfs.serialization.GtfsEntitySchemaFactory;
 import org.onebusaway.gtfs.serialization.GtfsWriter;
+import utils.Const;
 import xplanner.model.PoiData;
 
 import java.io.File;
 import java.io.IOException;
+import java.util.List;
 
 public class Main {
 
 
     public static void main(String[] args) {
-
 
         GtfsData gtfs = new GtfsData();
 
@@ -40,43 +47,45 @@ public class Main {
             ProgressIndicator.getInstance().init();
             ProgressIndicator.getInstance().setText("creating GTFS objects");
             gtfs.readGtfsFile(new File(args[0]));
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-
-        ProgressIndicator.getInstance().setText("rebuilding GTFS");
-        //Assume the gtfs is clean and correct
-        gtfs.rebuild();
-
-        //gtfs.fillTransfer();
-        ProgressIndicator.getInstance().setText("reading POIs file");
-        PoiData poiData = new PoiData();
-        //poiData.readDataFromFile("finished_data.csv");
-        poiData.readDataFromWeb("http://xplanner-cigo.herokuapp.com/api/pois");
 
 
 
-        SparkseeWriter sparkseeWriter = new SparkseeWriter();
-        sparkseeWriter.init();
-        ProgressIndicator.getInstance().setText("creating sparksee schema");
-        sparkseeWriter.createSchema("tplanner.gdb", "Tplanner");
-        ProgressIndicator.getInstance().setText("Sparksee: building POIs data");
-        sparkseeWriter.buildData(poiData.getPois(), poiData.getPlaces());
+            ProgressIndicator.getInstance().setText("rebuilding GTFS");
+            //Assume the gtfs is clean and correct
+            gtfs.rebuild();
+
+            //gtfs.fillTransfer();
+
+            ProgressIndicator.getInstance().setText("reading POIs");
+            EventAPI eventAPI = new EventAPIImpl();
+            List<EventResponse> events = eventAPI.getAllEventByLastDate(Const.FESTIVAL_TOKEN, 0, null);
+            System.out.println("Retrieved pois: " + events.size());
+            PoiData poiData = new PoiData();
+            poiData.readFromData(events);
+            //poiData.readDataFromWeb("http://xplanner-cigo.herokuapp.com/api/pois");
+
+            ProgressIndicator.getInstance().setText("initializing sparksee");
+            SparkseeWriter sparkseeWriter = new SparkseeWriter();
+            sparkseeWriter.init();
+            ProgressIndicator.getInstance().setText("creating sparksee schema");
+            sparkseeWriter.createSchema(Const.SPARKSEE_DB_FILE, Const.SPARKSEE_DB);
+            ProgressIndicator.getInstance().setText("Sparksee: building POIs data");
+            sparkseeWriter.buildData(poiData.getPois(), poiData.getPlaces());
 
 
-        ProgressIndicator.getInstance().setText("Sparksee: building GTFS data");
-        sparkseeWriter.writeGTFS(gtfs);
+            ProgressIndicator.getInstance().setText("Sparksee: building GTFS data");
+            sparkseeWriter.writeGTFS(gtfs);
 
-        ProgressIndicator.getInstance().setText("Sparksee: building auxiliary point");
-        sparkseeWriter.setUpAuxiliaryPoints();
+            ProgressIndicator.getInstance().setText("Sparksee: building auxiliary point");
+            sparkseeWriter.setUpAuxiliaryPoints();
 
-        ProgressIndicator.getInstance().setText("Sparksee: precalculating routes");
-        sparkseeWriter.precalculateRoutes();
-        sparkseeWriter.close();
-        sparkseeWriter.testData();
-        //for (StopTime stopTime : store.getAllStopTimes()) {
-        //    System.out.println(stopTime);
-        //}
+            ProgressIndicator.getInstance().setText("Sparksee: precalculating routes");
+            sparkseeWriter.precalculateRoutes();
+            sparkseeWriter.close();
+            sparkseeWriter.testData();
+            //for (StopTime stopTime : store.getAllStopTimes()) {
+            //    System.out.println(stopTime);
+            //}
         /*
         for (Transfer transfer : store.getAllTransfers()) {
             System.out.println("from " + transfer.getFromStop().getId() + " to " + transfer.getToStop().getId() +
@@ -112,7 +121,13 @@ public class Main {
         }
         */
 
-        ProgressIndicator.getInstance().close();
+            ProgressIndicator.getInstance().close();
+
+
+
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
 
         System.exit(0);
     }

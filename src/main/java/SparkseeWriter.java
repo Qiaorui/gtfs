@@ -4,6 +4,8 @@ import com.sparsity.sparksee.gdb.Objects;
 import org.json.simple.JSONArray;
 import org.json.simple.JSONObject;
 import org.onebusaway.gtfs.model.*;
+import utils.Const;
+import utils.JsonUtils;
 import xplanner.model.*;
 import gtfs.GtfsData;
 import gtfs.GtfsLibrary;
@@ -39,7 +41,7 @@ public class SparkseeWriter {
         SparkseeConfig cfg = new SparkseeConfig();
         Sparksee sparksee = new Sparksee(cfg);
         try {
-            Database db = sparksee.open("tplanner.gdb", true);
+            Database db = sparksee.open(Const.SPARKSEE_DB_FILE, true);
 
             Session sess = db.newSession();
             Graph g = sess.getGraph();
@@ -102,7 +104,7 @@ public class SparkseeWriter {
         SparkseeConfig cfg = new SparkseeConfig();
         Sparksee sparksee = new Sparksee(cfg);
         try {
-            Database db = sparksee.open("tplanner.gdb", true);
+            Database db = sparksee.open(Const.SPARKSEE_DB_FILE, true);
 
             Session sess = db.newSession();
             Graph g = sess.getGraph();
@@ -233,7 +235,7 @@ public class SparkseeWriter {
         int poiType = g.newNodeType("POI");
         g.newAttribute(poiType, "ID", DataType.Long, AttributeKind.Unique);
         g.newAttribute(poiType, "DURATION", DataType.Integer, AttributeKind.Basic);
-        g.newAttribute(poiType, "BASE_SCORE", DataType.Integer, AttributeKind.Basic);
+        //g.newAttribute(poiType, "BASE_SCORE", DataType.Integer, AttributeKind.Basic); //TODO: no more base score
         g.newAttribute(poiType, "HIGHLIGHT", DataType.Boolean, AttributeKind.Basic);
 
         int venueType = g.newNodeType("VENUE");
@@ -241,7 +243,7 @@ public class SparkseeWriter {
         g.newAttribute(venueType, "LONGITUDE", DataType.Double, AttributeKind.Indexed);
 
         int categoryType = g.newNodeType("CATEGORY");
-        g.newAttribute(categoryType, "NAME", DataType.String, AttributeKind.Unique);
+        g.newAttribute(categoryType, "ID", DataType.Long, AttributeKind.Unique);
 
         int stopType = g.newNodeType("STOP");
         g.newAttribute(stopType, "ID", DataType.String, AttributeKind.Unique);
@@ -278,7 +280,7 @@ public class SparkseeWriter {
         int poiType = g.findType("POI");
         int poiIdType = g.findAttribute(poiType, "ID");
         int poiDurationType = g.findAttribute(poiType, "DURATION");
-        int poiScoreType = g.findAttribute(poiType, "BASE_SCORE");
+        //int poiScoreType = g.findAttribute(poiType, "BASE_SCORE");
         int poiHighlightType = g.findAttribute(poiType, "HIGHLIGHT");
 
         int venueType = g.findType("VENUE");
@@ -286,7 +288,7 @@ public class SparkseeWriter {
         int venueLongitudeType = g.findAttribute(venueType, "LONGITUDE");
 
         int categoryType = g.findType("CATEGORY");
-        int categoryNameType = g.findAttribute(categoryType, "NAME");
+        int categoryIdType = g.findAttribute(categoryType, "ID");
 
         //int stopType = g.findType("STOP");
         //int stopIdType = g.findAttribute(stopType, "ID");
@@ -320,15 +322,15 @@ public class SparkseeWriter {
 
         for (int i = 0; i < pois.size(); i++) {
             long event = g.newNode(poiType);
-            g.setAttribute(event, poiIdType, value.setLong(i));
+            g.setAttribute(event, poiIdType, value.setLong(pois.get(i).getId()));
             g.setAttribute(event, poiDurationType, value.setInteger(pois.get(i).getDuration()));
             g.setAttribute(event, poiHighlightType, value.setBoolean(pois.get(i).isHighlight()));
-            g.setAttribute(event, poiScoreType, value.setInteger(pois.get(i).getBaseScore()));
+            //g.setAttribute(event, poiScoreType, value.setInteger(pois.get(i).getBaseScore()));
 
 
             // event -> category
-            for (Map.Entry<String, Integer> entry : pois.get(i).getCategories().entrySet()) {
-                long cat = g.findOrCreateObject(categoryNameType, value.setString(entry.getKey()));
+            for (Map.Entry<Long, Integer> entry : pois.get(i).getCategoryScores().entrySet()) {
+                long cat = g.findOrCreateObject(categoryIdType, value.setLong(entry.getKey()));
                 long scoring = g.newEdge(scoringType, event, cat);
                 g.setAttribute(scoring, scoringScoreType, value.setInteger(entry.getValue()));
             }
@@ -552,7 +554,7 @@ public class SparkseeWriter {
 
         }
 
-
+/*
         // stop to stop
         Objects stops = g.select(stopType);
         max = stops.size();
@@ -596,7 +598,7 @@ public class SparkseeWriter {
         }
 
 
-        stops.close();
+        stops.close();*/
         venues.close();
 
 

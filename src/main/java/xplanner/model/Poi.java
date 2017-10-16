@@ -1,5 +1,9 @@
 package xplanner.model;
 
+import network.model.response.CategoryScoreResponse;
+import network.model.response.EventResponse;
+import network.model.response.ScheduleResponse;
+import org.joda.time.DateTime;
 import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
@@ -33,6 +37,7 @@ public class Poi {
     private String rawSchedules;
     private String rawCategories;
     private Map<String, Integer> categories;
+    private Map<Long, Integer> categoryScores;
 
     private List<Schedule> schedules;
 
@@ -108,6 +113,10 @@ public class Poi {
         return schedules;
     }
 
+    public Map<Long, Integer> getCategoryScores() {
+        return categoryScores;
+    }
+
     public void bindData(JSONObject json) {
         try {
             id = json.getLong("id");
@@ -145,6 +154,35 @@ public class Poi {
 
         } catch (JSONException e) {
             e.printStackTrace();
+        }
+    }
+
+    public void bindData(EventResponse response) {
+        id = response.getId();
+        name = response.getName();
+        description = response.getDescription();
+        duration = response.getDuration();
+        address = response.getPlace().getAddress();
+        location = response.getPlace().getName();
+        isHighlight = response.getHighlight();
+        image = response.getImage();
+        poiType = "event";
+        latitude = response.getPlace().getLatitude();
+        longitude = response.getPlace().getLongitude();
+
+        categoryScores = new HashMap<>();
+        for (CategoryScoreResponse c : response.getCategoryScores()) {
+            categoryScores.put(c.getCategoryID(), c.getScore());
+        }
+        schedules = new ArrayList<>();
+        for (ScheduleResponse s : response.getSchedules()) {
+            DateTime start = new DateTime(s.getStartTime() * 1000);
+            DateTime end = new DateTime(s.getEndTime() * 1000);
+            int day = start.getYear() * 10000 + start.getMonthOfYear() * 100 + start.getDayOfMonth();
+            int startTime = start.getHourOfDay() * 60 + start.getMinuteOfHour();
+            int endTime = end.getHourOfDay() * 60 + end.getMinuteOfHour();
+            endTime = (endTime < startTime) ? endTime + 24*60 : endTime;
+            schedules.add(new Schedule(day, startTime, endTime));
         }
     }
 

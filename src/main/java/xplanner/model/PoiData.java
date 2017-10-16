@@ -1,5 +1,7 @@
 package xplanner.model;
 
+import network.model.response.CategoryResponse;
+import network.model.response.EventResponse;
 import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
@@ -19,6 +21,7 @@ public class PoiData {
     public PoiData() {
         events = new ArrayList<>();
         places = new HashSet<>();
+        pois = new ArrayList<>();
     }
 
     public void readDataFromFile(String f) {
@@ -38,6 +41,15 @@ public class PoiData {
         pois.forEach(item -> places.add(new Place(item.getLatitude(), item.getLongitude())));
     }
 
+    public void readFromData(List<EventResponse> events) {
+        for (EventResponse e : events) {
+            Poi p = new Poi();
+            p.bindData(e);
+            pois.add(p);
+        }
+        pois.forEach(item -> places.add(new Place(item.getLatitude(), item.getLongitude())));
+    }
+
     public ArrayList<PlainEvent> getEvents() {
         return events;
     }
@@ -50,7 +62,7 @@ public class PoiData {
         return pois;
     }
 
-    public static List<Poi> parsePoisJson(String jsonStr) {
+    private static List<Poi> parsePoisJson(String jsonStr) {
         ArrayList<Poi> result = new ArrayList<>();
         try {
             JSONObject root = new JSONObject(jsonStr);
